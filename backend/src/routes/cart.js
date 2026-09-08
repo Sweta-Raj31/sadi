@@ -1,0 +1,5 @@
+import express from 'express'; import Cart from '../models/Cart.js'; import Product from '../models/Product.js'; import {auth} from '../middleware/auth.js';
+const r=express.Router(); r.use(auth);
+r.get('/',async(req,res,next)=>{try{const c=await Cart.findOne({user:req.user.sub}).populate('items.product','name price stock').lean();res.json(c||{items:[]})}catch(e){next(e)}});
+r.post('/items',async(req,res,next)=>{try{const {productId,quantity=1}=req.body,p=await Product.findById(productId);if(!p)return res.status(404).json({message:'Product not found'});if(p.stock<quantity)return res.status(409).json({message:'Insufficient stock'});let c=await Cart.findOne({user:req.user.sub});if(!c)c=await Cart.create({user:req.user.sub,items:[]});const i=c.items.find(x=>x.product.toString()===productId);if(i)i.quantity+=quantity;else c.items.push({product:productId,quantity});await c.save();res.json(c)}catch(e){next(e)}});
+r.delete('/items/:productId',async(req,res,next)=>{try{const c=await Cart.findOne({user:req.user.sub});if(c){c.items=c.items.filter(x=>x.product.toString()!==req.params.productId);await c.save()}res.json(c||{items:[]})}catch(e){next(e)}}); export default r;

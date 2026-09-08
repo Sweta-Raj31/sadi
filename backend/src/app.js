@@ -1,0 +1,21 @@
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import mongoose from 'mongoose';
+import auth from './routes/auth.js';
+import products from './routes/products.js';
+import cart from './routes/cart.js';
+import orders from './routes/orders.js';
+import admin from './routes/admin.js';
+
+const app=express();
+app.use(helmet());
+app.use(cors({origin:process.env.CLIENT_URL||'http://localhost:5173'}));
+app.use(express.json({limit:'100kb'}));
+app.use(rateLimit({windowMs:15*60*1000,max:200,standardHeaders:true}));
+app.get('/api/v1/health',(req,res)=>res.json({status:'ok',db:mongoose.connection.readyState===1?'connected':'disconnected'}));
+app.use('/api/v1/auth',auth); app.use('/api/v1/products',products); app.use('/api/v1/cart',cart); app.use('/api/v1/orders',orders); app.use('/api/v1/admin',admin);
+app.use((err,req,res,next)=>{console.error(err);res.status(err.status||500).json({message:err.message||'Internal server error'});});
+export default app;

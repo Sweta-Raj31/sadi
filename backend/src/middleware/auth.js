@@ -1,0 +1,4 @@
+import jwt from 'jsonwebtoken';
+export const signToken=u=>jwt.sign({sub:u._id.toString(),role:u.role},process.env.JWT_SECRET,{expiresIn:'12h'});
+export const auth=(req,res,next)=>{const t=req.headers.authorization?.startsWith('Bearer ')?req.headers.authorization.slice(7):null;if(!t)return res.status(401).json({message:'Authentication required'});try{req.user=jwt.verify(t,process.env.JWT_SECRET);next()}catch{return res.status(401).json({message:'Invalid or expired token'})}};
+export const roles=(...allowed)=>(req,res,next)=>allowed.includes(req.user?.role)?next():res.status(403).json({message:'Forbidden'});

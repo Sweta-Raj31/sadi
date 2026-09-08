@@ -1,0 +1,5 @@
+import express from 'express'; import Order from '../models/Order.js'; import Product from '../models/Product.js'; import {auth,roles} from '../middleware/auth.js';
+const r=express.Router();r.use(auth,roles('admin'));
+r.get('/orders',async(req,res,next)=>{try{res.json({items:await Order.find().populate('user','name email').sort({createdAt:-1}).limit(100).lean()})}catch(e){next(e)}});
+r.patch('/orders/:id/status',async(req,res,next)=>{try{const allowed=['PLACED','CONFIRMED','SHIPPED','DELIVERED','CANCELLED'];if(!allowed.includes(req.body.status))return res.status(400).json({message:'Invalid status'});res.json({order:await Order.findByIdAndUpdate(req.params.id,{status:req.body.status},{new:true,runValidators:true}).lean()})}catch(e){next(e)}});
+r.get('/analytics',async(req,res,next)=>{try{const [sales]=await Order.aggregate([{$match:{status:{$ne:'CANCELLED'}}},{$group:{_id:null,revenue:{$sum:'$total'},orders:{$sum:1}}}]);const lowStock=await Product.countDocuments({stock:{$lte:5}});res.json({sales:sales||{revenue:0,orders:0},lowStock})}catch(e){next(e)}});export default r;
